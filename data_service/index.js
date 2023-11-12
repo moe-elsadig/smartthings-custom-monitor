@@ -6,7 +6,7 @@ console.log(".env detectable:", Boolean(process.env.DEVICE_ID.length));
 
 const { exec } = require("child_process");
 
-const deviceName = "OfficeSamsungAC"; // no spaces in the name
+const deviceName = process.env.DEVICE_NAME; // no spaces in the name
 const deviceID = process.env.DEVICE_ID;
 const outputPrefix = "output_";
 const outputFolder = "data_output_" + deviceName;

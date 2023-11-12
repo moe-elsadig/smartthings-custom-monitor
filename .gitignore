@@ -27,4 +27,6 @@ yarn-error.log*
 data_output_*
 data_service/data_output_*
 data_service/sample_output*
-data_service/ui.html
+data_service/node_modules
+data_service/node_modules*
+data_service/node_modules/*
