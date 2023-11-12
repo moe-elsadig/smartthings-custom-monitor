@@ -8,10 +8,20 @@ import {
     ListSubheader,
 } from "@mui/material";
 import { ExpandLess, ExpandMore, StarBorder } from "@mui/icons-material";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 
 function App() {
+    axios.defaults.baseURL = "http://localhost:3001/api";
+
     const [open, setOpen] = useState(true);
+    const [sample, setSample] = useState(null);
+
+    useEffect(() => {
+        axios.get("/sample").then((res) => {
+            console.log(res);
+        });
+    }, []);
 
     const handleClick = () => {
         setOpen(!open);
@@ -33,9 +43,6 @@ function App() {
                     </ListSubheader>
                 }
             >
-                <ListItemButton>
-                    <ListItemText primary="Sent mail" />
-                </ListItemButton>
                 <ListItemButton>
                     <ListItemText primary="Drafts" />
                 </ListItemButton>
