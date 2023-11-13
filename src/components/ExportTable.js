@@ -1,3 +1,4 @@
+import { Button } from "@mui/material";
 import axios from "axios";
 import React from "react";
 import * as XLSX from "xlsx";
@@ -41,7 +42,9 @@ const ExportTable = ({ data, columns }) => {
 
     return (
         <div>
-            <button onClick={handleExportClick}>Export to Excel</button>
+            <Button variant="contained" onClick={handleExportClick}>
+                Export to Excel
+            </Button>
         </div>
     );
 };
