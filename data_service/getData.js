@@ -5,6 +5,7 @@ require("dotenv").config({ path: ".env" });
 console.log(".env detectable:", Boolean(process.env.DEVICE_ID.length));
 
 const { exec } = require("child_process");
+const fs = require("fs");
 
 const deviceName = process.env.DEVICE_NAME; // no spaces in the name
 const deviceID = process.env.DEVICE_ID;
@@ -33,6 +34,7 @@ function myFunction() {
         .replace(/:/g, "-")
         .replace(/\.\d+Z/, "Z");
 
+    let filePath = `./${outputFolder}/${outputPrefix}${fileTimestamp}.json`;
     let cliCommand = `smartthings devices:status ${deviceID} -j > ./${outputFolder}/${outputPrefix}${fileTimestamp}.json`;
 
     exec(cliCommand, (error, stdout, stderr) => {
@@ -44,11 +46,30 @@ function myFunction() {
             console.error(`Command execution failed: ${stderr}`);
             return;
         }
-        console.log(`New file: ${fileTimestamp} ${stdout}`);
+        // Check file size
+        const stats = fs.statSync(filePath);
+        const fileSizeInBytes = stats.size;
+
+        if (fileSizeInBytes === 0) {
+            console.warn(`Warning: Empty file detected - ${filePath}`);
+
+            // Remove the empty file
+            fs.unlink(filePath, (unlinkError) => {
+                if (unlinkError) {
+                    console.error(
+                        `Error removing empty file: ${unlinkError.message}`
+                    );
+                } else {
+                    console.log(`Empty file removed: ${filePath}`);
+                }
+            });
+        } else {
+            console.log(`New file: ${fileTimestamp} ${stdout}`);
+        }
     });
 }
 
-// Set the interval to 15 seconds (15,000 milliseconds)
-const interval = 5000;
+// Set the interval to 60 seconds (60,000 milliseconds)
+const interval = 60000;
 
 setInterval(myFunction, interval);
