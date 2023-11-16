@@ -1,23 +1,11 @@
-console.log("Running...");
+const fs = require("fs");
 
 require("dotenv").config({ path: ".env" });
 
 console.log(".env detectable:", Boolean(process.env.DEVICE_ID.length));
 
-const { exec } = require("child_process");
-const fs = require("fs");
-
 const deviceName = process.env.DEVICE_NAME; // no spaces in the name
-const deviceID = process.env.DEVICE_ID;
-const outputPrefix = "output_";
 const outputFolder = "data_output_" + deviceName;
-let fileTimestamp = "sample_";
-
-function areJsonObjectsEqual(obj1, obj2) {
-    const str1 = JSON.stringify(obj1);
-    const str2 = JSON.stringify(obj2);
-    return str1 === str2;
-}
 
 function deleteIdenticalJsonFiles(folderPath) {
     const fileContents = {};
@@ -55,5 +43,30 @@ function deleteIdenticalJsonFiles(folderPath) {
     console.log("Deletion process completed.");
 }
 
+// Example usage with retry mechanism
+function deleteFilesWithRetry(folderPath, retryCount = 3, retryDelay = 5000) {
+    let attempts = 0;
+
+    function attemptDeletion() {
+        try {
+            deleteIdenticalJsonFiles(folderPath);
+        } catch (error) {
+            if (error.code === "EBUSY" && attempts < retryCount) {
+                attempts++;
+                console.warn(
+                    `File deletion failed, retrying in ${
+                        retryDelay / 1000
+                    } seconds...`
+                );
+                setTimeout(attemptDeletion, retryDelay);
+            } else {
+                console.error(`Error: ${error.message}`);
+            }
+        }
+    }
+
+    attemptDeletion();
+}
+
 // Example usage
-deleteIdenticalJsonFiles(outputFolder);
+deleteFilesWithRetry(outputFolder);

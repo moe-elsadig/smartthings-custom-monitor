@@ -12,23 +12,20 @@ const deviceID = process.env.DEVICE_ID;
 const outputPrefix = "output_";
 const outputFolder = "data_output_" + deviceName;
 let fileTimestamp = "sample_";
-
-// "smartthings devices:status a2df25e2-7fee-7ca9-70f0-2ba4f3bc7fbb -j > sample_output2.json";
+let fileCreationInProgress = false;
 
 exec(`mkdir ${outputFolder}`, (error, stdout, stderr) => {
-    // if (error) {
-    //     console.error(`Error: ${error.message}`);
-    //     return;
-    // }
-    // if (stderr) {
-    //     console.error(`Command execution failed: ${stderr}`);
-    //     return;
-    // }
-    // console.log(`${stdout}`);
     console.log(`Output folder ${outputFolder}`);
 });
 
 function myFunction() {
+    if (fileCreationInProgress) {
+        // console.log("File creation in progress. Skipping this interval.");
+        return;
+    }
+
+    fileCreationInProgress = true;
+
     fileTimestamp = new Date()
         .toISOString()
         .replace(/:/g, "-")
@@ -38,6 +35,8 @@ function myFunction() {
     let cliCommand = `smartthings devices:status ${deviceID} -j > ./${outputFolder}/${outputPrefix}${fileTimestamp}.json`;
 
     exec(cliCommand, (error, stdout, stderr) => {
+        fileCreationInProgress = false;
+
         if (error) {
             console.error(`Error: ${error.message}`);
             return;
@@ -46,6 +45,7 @@ function myFunction() {
             console.error(`Command execution failed: ${stderr}`);
             return;
         }
+
         // Check file size
         const stats = fs.statSync(filePath);
         const fileSizeInBytes = stats.size;
@@ -69,7 +69,74 @@ function myFunction() {
     });
 }
 
-// Set the interval to 60 seconds (60,000 milliseconds)
-const interval = 60000;
+function deleteIdenticalJsonFiles(folderPath) {
+    const fileContents = {};
 
+    // Read files in the folder
+    const files = fs.readdirSync(folderPath);
+
+    // Iterate through files in reverse order (newest to oldest)
+    for (let i = files.length - 1; i >= 0; i--) {
+        const file = files[i];
+        const filePath = `${folderPath}/${file}`;
+
+        // Check if it's a file
+        if (fs.statSync(filePath).isFile()) {
+            // Read content of the file
+            const fileContent = fs.readFileSync(filePath, "utf-8");
+
+            // Check if the file is empty
+            const isEmpty = fileContent.trim() === "";
+
+            if (isEmpty) {
+                console.log(`Deleting empty file: ${filePath}`);
+                fs.unlinkSync(filePath);
+            } else if (fileContents[fileContent]) {
+                // If content already exists, delete the file
+                console.log(`Deleting identical file (newer): ${filePath}`);
+                fs.unlinkSync(filePath);
+            } else {
+                // Store content for future comparisons
+                fileContents[fileContent] = true;
+            }
+        }
+    }
+
+    console.log("Deletion process completed.");
+}
+
+// Example usage with retry mechanism
+function deleteFilesWithRetry(retryCount = 3, retryDelay = 5000) {
+    let attempts = 0;
+
+    function attemptDeletion() {
+        try {
+            deleteIdenticalJsonFiles(outputFolder);
+        } catch (error) {
+            if (error.code === "EBUSY" && attempts < retryCount) {
+                attempts++;
+                console.warn(
+                    `File deletion failed, retrying in ${
+                        retryDelay / 1000
+                    } seconds...`
+                );
+                setTimeout(attemptDeletion, retryDelay);
+            } else {
+                console.error(`Error: ${error.message}`);
+            }
+        }
+    }
+
+    attemptDeletion();
+}
+
+// pre-run
+deleteFilesWithRetry(outputFolder);
+
+// Set the interval to 1 second (1,000 milliseconds) for file creation
+const interval = 1000;
 setInterval(myFunction, interval);
+
+// Set the interval for cleanup to 60 mins (3,600,000 milliseconds)
+const cleanupInterval = 3600000; // 60 minutes
+setInterval(() => deleteFilesWithRetry(outputFolder), cleanupInterval);
